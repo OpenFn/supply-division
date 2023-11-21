@@ -1,0 +1,90 @@
+{
+  "id": "8d63dfa5-8ff3-436d-b9d1-58cb696ca00c",
+  "name": "unicef-supply",
+  "description": null,
+  "inserted_at": "2023-10-03T09:49:32",
+  "updated_at": "2023-11-21T16:00:20",
+  "scheduled_deletion": null,
+  "requires_mfa": false,
+  "workflows": {
+    "SMT-Example": {
+      "id": "abfc68cf-f0f3-428b-9276-8c8b11d7af53",
+      "name": "SMT Example",
+      "inserted_at": "2023-10-03T09:50:37",
+      "updated_at": "2023-11-21T17:23:32",
+      "project_id": "8d63dfa5-8ff3-436d-b9d1-58cb696ca00c",
+      "deleted_at": null,
+      "triggers": {
+        "cron": {
+          "id": "7926f545-9112-4497-b2b7-e5a28425a00f",
+          "type": "cron",
+          "cron_expression": "*/10 * * * *"
+        }
+      },
+      "jobs": {
+        "build-and-map": {
+          "id": "be666071-ede7-4a9d-9500-c4e109e4538e",
+          "name": "build and map",
+          "body": "fn(state => {\n  const filteredData = state.data.map(x => {\n    return {\n      uid: x.id,\n      title: `example only ${x.title}`,\n      program: \"food-delivery-v3\",\n      user: x.userId\n    }\n  })\n\n  return { filteredData }\n});",
+          "adaptor": "@openfn/language-ocl@latest"
+        },
+        "get-data-from-SMT": {
+          "id": "83668659-3e63-475d-83ae-8354009540f3",
+          "name": "get data from SMT",
+          "body": "// get data from the SMT\nget('posts');\n\n// drop everything else, only pluck out what we need\nfn(state => {\n  const stuffWeWant = state.data.slice(0, 10);\n  return { data: stuffWeWant }\n});",
+          "adaptor": "@openfn/language-http@latest"
+        },
+        "load-to-dhis2": {
+          "id": "9a6da1f1-198d-4f0e-b0b3-c8cbc2a033fa",
+          "name": "load to dhis2",
+          "body": "create('dataValueSets', {\n  completeDate: '2014-02-03',\n  period: '201401',\n  orgUnit: \"dWOAzMcK2Wt\", /*Alkalia CHP*/\n  dataValues: state.filteredData.map(x => ({\n    dataElement: 'f7n9E0hX8qk',\n    value: x.user,\n  }))\n});",
+          "adaptor": "@openfn/language-dhis2@latest"
+        },
+        "handle-errors": {
+          "id": "c2969eb4-19ba-49f0-a943-8e541ac61d48",
+          "name": "handle errors",
+          "body": "post('https://jsonplaceholder.typicode.com/posts', {\n  body: {\n    \"userId\": 1,\n    \"title\": \"The sync to DHIS2 just failed.\",\n    \"body\": \"This failed!\"\n  }\n});",
+          "adaptor": "@openfn/language-http@latest"
+        },
+        "finalize-on-SMT": {
+          "id": "e8c61ef8-f9ce-429a-b29a-0f8903e363fd",
+          "name": "finalize on SMT",
+          "body": "fn(state => {\n  console.log('DHIS2 says', JSON.stringify(state.data.response, null, 2));\n  return state;\n})\n\npost('posts', {\n  body: {\n    \"userId\": 1,\n    \"title\": \"Everything worked, here's the updated data\",\n    \"body\": state.data\n  }\n});",
+          "adaptor": "@openfn/language-http@latest"
+        }
+      },
+      "edges": {
+        "cron->get-data-from-SMT": {
+          "id": "4a7d4951-a35a-45d7-ac00-ac29f01e0081",
+          "condition": "always",
+          "source_trigger_id": "7926f545-9112-4497-b2b7-e5a28425a00f",
+          "target_job_id": "83668659-3e63-475d-83ae-8354009540f3"
+        },
+        "get-data-from-SMT->build-and-map": {
+          "id": "e1f92d50-931d-4133-b30d-758789415c98",
+          "source_job_id": "83668659-3e63-475d-83ae-8354009540f3",
+          "condition": "on_job_success",
+          "target_job_id": "be666071-ede7-4a9d-9500-c4e109e4538e"
+        },
+        "build-and-map->load-to-dhis2": {
+          "id": "44a15cbb-6a1b-41c0-8a26-ecf570bbbacb",
+          "source_job_id": "be666071-ede7-4a9d-9500-c4e109e4538e",
+          "condition": "on_job_success",
+          "target_job_id": "9a6da1f1-198d-4f0e-b0b3-c8cbc2a033fa"
+        },
+        "build-and-map->handle-errors": {
+          "id": "870f7edd-e910-4b26-b8f7-9e56778ae2fc",
+          "source_job_id": "be666071-ede7-4a9d-9500-c4e109e4538e",
+          "condition": "on_job_failure",
+          "target_job_id": "c2969eb4-19ba-49f0-a943-8e541ac61d48"
+        },
+        "load-to-dhis2->finalize-on-SMT": {
+          "id": "cfe487cd-7890-43a8-a293-5ba392ce03f7",
+          "source_job_id": "9a6da1f1-198d-4f0e-b0b3-c8cbc2a033fa",
+          "condition": "on_job_success",
+          "target_job_id": "e8c61ef8-f9ce-429a-b29a-0f8903e363fd"
+        }
+      }
+    }
+  }
+}

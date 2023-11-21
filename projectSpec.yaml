@@ -1,0 +1,117 @@
+name: unicef-supply
+# description:
+# credentials:
+# globals:
+workflows:
+  SMT-Example:
+    name: SMT Example
+    jobs:
+      build-and-map:
+        name: build and map
+        adaptor: '@openfn/language-ocl@latest'
+        # credential:
+        # globals:
+        body: |
+          fn(state => {
+            const filteredData = state.data.map(x => {
+              return {
+                uid: x.id,
+                title: `example only ${x.title}`,
+                program: "food-delivery-v3",
+                user: x.userId
+              }
+            })
+          
+            return { filteredData }
+          });
+      get-data-from-SMT:
+        name: get data from SMT
+        adaptor: '@openfn/language-http@latest'
+        # credential:
+        # globals:
+        body: |
+          // get data from the SMT
+          get('posts');
+          
+          // drop everything else, only pluck out what we need
+          fn(state => {
+            const stuffWeWant = state.data.slice(0, 10);
+            return { data: stuffWeWant }
+          });
+      load-to-dhis2:
+        name: load to dhis2
+        adaptor: '@openfn/language-dhis2@latest'
+        # credential:
+        # globals:
+        body: |
+          create('dataValueSets', {
+            completeDate: '2014-02-03',
+            period: '201401',
+            orgUnit: "dWOAzMcK2Wt", /*Alkalia CHP*/
+            dataValues: state.filteredData.map(x => ({
+              dataElement: 'f7n9E0hX8qk',
+              value: x.user,
+            }))
+          });
+      handle-errors:
+        name: handle errors
+        adaptor: '@openfn/language-http@latest'
+        # credential:
+        # globals:
+        body: |
+          post('https://jsonplaceholder.typicode.com/posts', {
+            body: {
+              "userId": 1,
+              "title": "The sync to DHIS2 just failed.",
+              "body": "This failed!"
+            }
+          });
+      finalize-on-SMT:
+        name: finalize on SMT
+        adaptor: '@openfn/language-http@latest'
+        # credential:
+        # globals:
+        body: |
+          fn(state => {
+            console.log('DHIS2 says', JSON.stringify(state.data.response, null, 2));
+            return state;
+          })
+          
+          post('posts', {
+            body: {
+              "userId": 1,
+              "title": "Everything worked, here's the updated data",
+              "body": state.data
+            }
+          });
+    triggers:
+      cron:
+        type: cron
+        cron_expression: '*/10 * * * *'
+        enabled: true
+    edges:
+      cron->get-data-from-SMT:
+        source_trigger: cron
+        target_job: get-data-from-SMT
+        condition: always
+        enabled: true
+      get-data-from-SMT->build-and-map:
+        source_job: get-data-from-SMT
+        target_job: build-and-map
+        condition: on_job_success
+        enabled: true
+      build-and-map->load-to-dhis2:
+        source_job: build-and-map
+        target_job: load-to-dhis2
+        condition: on_job_success
+        enabled: true
+      build-and-map->handle-errors:
+        source_job: build-and-map
+        target_job: handle-errors
+        condition: on_job_failure
+        enabled: true
+      load-to-dhis2->finalize-on-SMT:
+        source_job: load-to-dhis2
+        target_job: finalize-on-SMT
+        condition: on_job_success
+        enabled: true
