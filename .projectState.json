@@ -3,10 +3,10 @@
   "name": "unicef-supply",
   "description": null,
   "inserted_at": "2023-10-03T09:49:32",
-  "updated_at": "2023-11-21T17:51:01",
+  "updated_at": "2024-04-13T08:50:04",
   "scheduled_deletion": null,
-  "dataclip_retention_period": null,
   "history_retention_period": null,
+  "dataclip_retention_period": null,
   "requires_mfa": false,
   "retention_policy": "retain_all",
   "workflows": {
@@ -14,49 +14,9 @@
       "id": "abfc68cf-f0f3-428b-9276-8c8b11d7af53",
       "name": "SMT Example",
       "inserted_at": "2023-10-03T09:50:37",
-      "updated_at": "2023-11-28T12:18:35",
+      "updated_at": "2024-04-13T08:50:04",
       "project_id": "8d63dfa5-8ff3-436d-b9d1-58cb696ca00c",
       "deleted_at": null,
-      "triggers": {
-        "cron": {
-          "enabled": false,
-          "id": "7926f545-9112-4497-b2b7-e5a28425a00f",
-          "type": "cron",
-          "cron_expression": "15 * * * *"
-        }
-      },
-      "jobs": {
-        "build-and-map": {
-          "id": "be666071-ede7-4a9d-9500-c4e109e4538e",
-          "name": "build and map",
-          "body": "fn(state => {\n  const filteredData = state.data.map(x => {\n    return {\n      uid: x.id,\n      title: `example only ${x.title}`,\n      program: \"food-delivery-v3\",\n      user: x.userId\n    }\n  })\n\n  return { filteredData }\n});",
-          "adaptor": "@openfn/language-ocl@latest"
-        },
-        "get-data-from-SMT": {
-          "id": "83668659-3e63-475d-83ae-8354009540f3",
-          "name": "get data from SMT",
-          "body": "// get data from the SMT\nget('posts');\n\n// drop everything else, only pluck out what we need\nfn(state => {\n  const stuffWeWant = state.data.slice(0, 10);\n  return { data: stuffWeWant }\n});",
-          "adaptor": "@openfn/language-http@latest"
-        },
-        "load-to-dhis2": {
-          "id": "9a6da1f1-198d-4f0e-b0b3-c8cbc2a033fa",
-          "name": "load to dhis2",
-          "body": "create('dataValueSets', {\n  completeDate: '2014-02-03',\n  period: '201401',\n  orgUnit: \"dWOAzMcK2Wt\", /*Alkalia CHP*/\n  dataValues: state.filteredData.map(x => ({\n    dataElement: 'f7n9E0hX8qk',\n    value: x.user,\n  }))\n});",
-          "adaptor": "@openfn/language-dhis2@latest"
-        },
-        "handle-errors": {
-          "id": "c2969eb4-19ba-49f0-a943-8e541ac61d48",
-          "name": "handle errors",
-          "body": "post('https://jsonplaceholder.typicode.com/posts', {\n  body: {\n    \"userId\": 1,\n    \"title\": \"The sync to DHIS2 just failed.\",\n    \"body\": \"This failed!\"\n  }\n});",
-          "adaptor": "@openfn/language-http@latest"
-        },
-        "finalize-on-SMT": {
-          "id": "e8c61ef8-f9ce-429a-b29a-0f8903e363fd",
-          "name": "finalize on SMT",
-          "body": "fn(state => {\n  console.log('DHIS2 says', JSON.stringify(state.data.response, null, 2));\n  return state;\n})\n\npost('posts', {\n  body: {\n    \"userId\": 1,\n    \"title\": \"Everything worked, here's the updated data\",\n    \"body\": state.data\n  }\n});",
-          "adaptor": "@openfn/language-http@latest"
-        }
-      },
       "edges": {
         "cron->get-data-from-SMT": {
           "enabled": true,
@@ -93,30 +53,55 @@
           "condition_type": "on_job_success",
           "target_job_id": "e8c61ef8-f9ce-429a-b29a-0f8903e363fd"
         }
+      },
+      "jobs": {
+        "build-and-map": {
+          "id": "be666071-ede7-4a9d-9500-c4e109e4538e",
+          "name": "build and map",
+          "body": "fn(state => {\n  const filteredData = state.data.map(x => {\n    return {\n      uid: x.id,\n      title: `example only ${x.title}`,\n      program: \"food-delivery-v3\",\n      user: x.userId\n    }\n  })\n\n  return { filteredData }\n});\n",
+          "adaptor": "@openfn/language-ocl@latest"
+        },
+        "get-data-from-SMT": {
+          "id": "83668659-3e63-475d-83ae-8354009540f3",
+          "name": "get data from SMT",
+          "body": "// get data from the SMT\nget('posts');\n\n// drop everything else, only pluck out what we need\nfn(state => {\n  const stuffWeWant = state.data.slice(0, 10);\n  return { data: stuffWeWant }\n});\n",
+          "adaptor": "@openfn/language-http@latest"
+        },
+        "load-to-dhis2": {
+          "id": "9a6da1f1-198d-4f0e-b0b3-c8cbc2a033fa",
+          "name": "load to dhis2",
+          "body": "create('dataValueSets', {\n  completeDate: '2014-02-03',\n  period: '201401',\n  orgUnit: \"dWOAzMcK2Wt\", /*Alkalia CHP*/\n  dataValues: state.filteredData.map(x => ({\n    dataElement: 'f7n9E0hX8qk',\n    value: x.user,\n  }))\n});\n",
+          "adaptor": "@openfn/language-dhis2@latest"
+        },
+        "handle-errors": {
+          "id": "c2969eb4-19ba-49f0-a943-8e541ac61d48",
+          "name": "handle errors",
+          "body": "post('https://jsonplaceholder.typicode.com/posts', {\n  body: {\n    \"userId\": 1,\n    \"title\": \"The sync to DHIS2 just failed.\",\n    \"body\": \"This failed!\"\n  }\n});\n",
+          "adaptor": "@openfn/language-http@latest"
+        },
+        "finalize-on-SMT": {
+          "id": "e8c61ef8-f9ce-429a-b29a-0f8903e363fd",
+          "name": "finalize on SMT",
+          "body": "fn(state => {\n  state.testing = 42;\n  console.log('DHIS2 says', JSON.stringify(state.data.response, null, 2));\n  return state;\n})\n\npost('posts', {\n  body: {\n    \"userId\": 1,\n    \"title\": \"Everything worked, here's the updated data\",\n    \"body\": state.data\n  }\n});\n",
+          "adaptor": "@openfn/language-http@latest"
+        }
+      },
+      "triggers": {
+        "cron": {
+          "enabled": false,
+          "id": "7926f545-9112-4497-b2b7-e5a28425a00f",
+          "type": "cron",
+          "cron_expression": "15 * * * *"
+        }
       }
     },
     "Select-from-DB": {
       "id": "a31b0062-2ad2-45dd-9451-81d2fcf3c2d3",
       "name": "Select from DB",
       "inserted_at": "2023-11-22T08:32:10",
-      "updated_at": "2023-11-22T08:35:59",
+      "updated_at": "2024-04-13T08:50:04",
       "project_id": "8d63dfa5-8ff3-436d-b9d1-58cb696ca00c",
       "deleted_at": null,
-      "triggers": {
-        "webhook": {
-          "enabled": false,
-          "id": "97160bcb-c62a-4ae6-b37b-e75718f82acc",
-          "type": "webhook"
-        }
-      },
-      "jobs": {
-        "Get-food-hygiene-data": {
-          "id": "c525a5ae-b88d-43c9-aeec-510275e39f35",
-          "name": "Get food hygiene data",
-          "body": "sql(state => `select * from food_hygiene_interview`);",
-          "adaptor": "@openfn/language-postgresql@latest"
-        }
-      },
       "edges": {
         "webhook->Get-food-hygiene-data": {
           "enabled": true,
@@ -124,6 +109,21 @@
           "source_trigger_id": "97160bcb-c62a-4ae6-b37b-e75718f82acc",
           "condition_type": "always",
           "target_job_id": "c525a5ae-b88d-43c9-aeec-510275e39f35"
+        }
+      },
+      "jobs": {
+        "Get-food-hygiene-data": {
+          "id": "c525a5ae-b88d-43c9-aeec-510275e39f35",
+          "name": "Get food hygiene data",
+          "body": "sql(state => `select * from food_hygiene_interview`);\n",
+          "adaptor": "@openfn/language-postgresql@latest"
+        }
+      },
+      "triggers": {
+        "webhook": {
+          "enabled": false,
+          "id": "97160bcb-c62a-4ae6-b37b-e75718f82acc",
+          "type": "webhook"
         }
       }
     }
