@@ -73,6 +73,7 @@ workflows:
         # globals:
         body: |
           fn(state => {
+            state.testing = 42;
             console.log('DHIS2 says', JSON.stringify(state.data.response, null, 2));
             return state;
           })
