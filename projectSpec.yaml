@@ -87,31 +87,51 @@ workflows:
     triggers:
       cron:
         type: cron
-        cron_expression: '*/10 * * * *'
-        enabled: true
+        cron_expression: '15 * * * *'
+        enabled: false
     edges:
       cron->get-data-from-SMT:
         source_trigger: cron
         target_job: get-data-from-SMT
-        condition: always
+        condition_type: always
         enabled: true
       get-data-from-SMT->build-and-map:
         source_job: get-data-from-SMT
         target_job: build-and-map
-        condition: on_job_success
+        condition_type: on_job_success
         enabled: true
       build-and-map->load-to-dhis2:
         source_job: build-and-map
         target_job: load-to-dhis2
-        condition: on_job_success
+        condition_type: on_job_success
         enabled: true
       build-and-map->handle-errors:
         source_job: build-and-map
         target_job: handle-errors
-        condition: on_job_failure
+        condition_type: on_job_failure
         enabled: true
       load-to-dhis2->finalize-on-SMT:
         source_job: load-to-dhis2
         target_job: finalize-on-SMT
-        condition: on_job_success
+        condition_type: on_job_success
+        enabled: true
+  Select-from-DB:
+    name: Select from DB
+    jobs:
+      Get-food-hygiene-data:
+        name: Get food hygiene data
+        adaptor: '@openfn/language-postgresql@latest'
+        # credential:
+        # globals:
+        body: |
+          sql(state => `select * from food_hygiene_interview`);
+    triggers:
+      webhook:
+        type: webhook
+        enabled: false
+    edges:
+      webhook->Get-food-hygiene-data:
+        source_trigger: webhook
+        target_job: Get-food-hygiene-data
+        condition_type: always
         enabled: true

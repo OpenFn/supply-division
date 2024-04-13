@@ -3,22 +3,26 @@
   "name": "unicef-supply",
   "description": null,
   "inserted_at": "2023-10-03T09:49:32",
-  "updated_at": "2023-11-21T16:00:20",
+  "updated_at": "2023-11-21T17:51:01",
   "scheduled_deletion": null,
+  "dataclip_retention_period": null,
+  "history_retention_period": null,
   "requires_mfa": false,
+  "retention_policy": "retain_all",
   "workflows": {
     "SMT-Example": {
       "id": "abfc68cf-f0f3-428b-9276-8c8b11d7af53",
       "name": "SMT Example",
       "inserted_at": "2023-10-03T09:50:37",
-      "updated_at": "2023-11-21T17:23:32",
+      "updated_at": "2023-11-28T12:18:35",
       "project_id": "8d63dfa5-8ff3-436d-b9d1-58cb696ca00c",
       "deleted_at": null,
       "triggers": {
         "cron": {
+          "enabled": false,
           "id": "7926f545-9112-4497-b2b7-e5a28425a00f",
           "type": "cron",
-          "cron_expression": "*/10 * * * *"
+          "cron_expression": "15 * * * *"
         }
       },
       "jobs": {
@@ -55,34 +59,71 @@
       },
       "edges": {
         "cron->get-data-from-SMT": {
+          "enabled": true,
           "id": "4a7d4951-a35a-45d7-ac00-ac29f01e0081",
-          "condition": "always",
           "source_trigger_id": "7926f545-9112-4497-b2b7-e5a28425a00f",
+          "condition_type": "always",
           "target_job_id": "83668659-3e63-475d-83ae-8354009540f3"
         },
         "get-data-from-SMT->build-and-map": {
+          "enabled": true,
           "id": "e1f92d50-931d-4133-b30d-758789415c98",
           "source_job_id": "83668659-3e63-475d-83ae-8354009540f3",
-          "condition": "on_job_success",
+          "condition_type": "on_job_success",
           "target_job_id": "be666071-ede7-4a9d-9500-c4e109e4538e"
         },
         "build-and-map->load-to-dhis2": {
+          "enabled": true,
           "id": "44a15cbb-6a1b-41c0-8a26-ecf570bbbacb",
           "source_job_id": "be666071-ede7-4a9d-9500-c4e109e4538e",
-          "condition": "on_job_success",
+          "condition_type": "on_job_success",
           "target_job_id": "9a6da1f1-198d-4f0e-b0b3-c8cbc2a033fa"
         },
         "build-and-map->handle-errors": {
+          "enabled": true,
           "id": "870f7edd-e910-4b26-b8f7-9e56778ae2fc",
           "source_job_id": "be666071-ede7-4a9d-9500-c4e109e4538e",
-          "condition": "on_job_failure",
+          "condition_type": "on_job_failure",
           "target_job_id": "c2969eb4-19ba-49f0-a943-8e541ac61d48"
         },
         "load-to-dhis2->finalize-on-SMT": {
+          "enabled": true,
           "id": "cfe487cd-7890-43a8-a293-5ba392ce03f7",
           "source_job_id": "9a6da1f1-198d-4f0e-b0b3-c8cbc2a033fa",
-          "condition": "on_job_success",
+          "condition_type": "on_job_success",
           "target_job_id": "e8c61ef8-f9ce-429a-b29a-0f8903e363fd"
+        }
+      }
+    },
+    "Select-from-DB": {
+      "id": "a31b0062-2ad2-45dd-9451-81d2fcf3c2d3",
+      "name": "Select from DB",
+      "inserted_at": "2023-11-22T08:32:10",
+      "updated_at": "2023-11-22T08:35:59",
+      "project_id": "8d63dfa5-8ff3-436d-b9d1-58cb696ca00c",
+      "deleted_at": null,
+      "triggers": {
+        "webhook": {
+          "enabled": false,
+          "id": "97160bcb-c62a-4ae6-b37b-e75718f82acc",
+          "type": "webhook"
+        }
+      },
+      "jobs": {
+        "Get-food-hygiene-data": {
+          "id": "c525a5ae-b88d-43c9-aeec-510275e39f35",
+          "name": "Get food hygiene data",
+          "body": "sql(state => `select * from food_hygiene_interview`);",
+          "adaptor": "@openfn/language-postgresql@latest"
+        }
+      },
+      "edges": {
+        "webhook->Get-food-hygiene-data": {
+          "enabled": true,
+          "id": "f601cacd-c5c3-497c-b861-6b8fd1ba9771",
+          "source_trigger_id": "97160bcb-c62a-4ae6-b37b-e75718f82acc",
+          "condition_type": "always",
+          "target_job_id": "c525a5ae-b88d-43c9-aeec-510275e39f35"
         }
       }
     }
