@@ -1,5 +1,0 @@
-{
-  "specPath": "projectSpec.yaml",
-  "statePath": ".projectState.json",
-  "endpoint": "https://app.openfn.org"
-}
